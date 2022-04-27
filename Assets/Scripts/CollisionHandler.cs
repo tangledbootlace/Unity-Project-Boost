@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -6,50 +7,78 @@ public class CollisionHandler : MonoBehaviour
     [SerializeField] float levelLoadDelay = 2f;
     [SerializeField] AudioClip success;
     [SerializeField] AudioClip crash;
+    [SerializeField] ParticleSystem successParticles;
+    [SerializeField] ParticleSystem crashParticles;
 
     AudioSource audioSource;
 
     bool isTransitioning = false;
+    bool collisionDisabled = false;
 
     void Start()
     {
         audioSource = GetComponent<AudioSource>();
     }
 
+    void Update()
+    {
+        RespondToDebugKeys();
+    }
+
+    private void RespondToDebugKeys()
+    {
+        if (Input.GetKeyDown(KeyCode.L))
+        {
+            LoadNextLevel();
+        }
+        else if (Input.GetKeyDown(KeyCode.C))
+        {
+            collisionDisabled = !collisionDisabled; //toggle collision
+        }
+    }
+
     void OnCollisionEnter(Collision other)
     {
-        if (!isTransitioning)
+        if (isTransitioning || collisionDisabled) { return; }
+
+        switch (other.gameObject.tag)
         {
-            switch (other.gameObject.tag)
-            {
-                case "Friendly":
-                    break;            
-                case "Finish":
-                    StartSuccessSequence();
-                    break;            
-                default:
-                    StartCrashSequence();
-                    break;
-            }
+            case "Friendly":
+                break;
+            case "Finish":
+                StartSuccessSequence();
+                break;
+            default:
+                StartCrashSequence();
+                break;
         }
+
     }
 
     void StartSuccessSequence()
     {
         isTransitioning = true;
+        audioSource.Stop();
         audioSource.PlayOneShot(success);
+        
         //TODO: Pause Camera Follow
-        //TODO: Add particle effect upon crash
+        
+        successParticles.Play();
+
         GetComponent<Movement>().enabled = false;
         Invoke("LoadNextLevel", levelLoadDelay);
     }
 
     void StartCrashSequence()
     {
-        isTransitioning = true;
+        isTransitioning = true;        
+        audioSource.Stop();
         audioSource.PlayOneShot(crash);
+
         //TODO: Pause Camera Follow
-        //TODO: Add particle effect upon crash
+
+        crashParticles.Play();
+
         GetComponent<Movement>().enabled = false;
         Invoke("ReloadLevel", levelLoadDelay);
     }
